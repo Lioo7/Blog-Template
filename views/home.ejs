@@ -2,13 +2,18 @@
 <%- include('partials/header'); %>
 
 <h1>Home</h1>
-<p><%= homeStartingContent %> </p>
+<p> <%= startingContnet %> </p>
 
-<% posts.forEach(function (post) { %>
-<h1><%= post.title %></h1>
-<p class="hundred-chars"><%= post.content %></p>
-<a href="/post/<%= post.title %>">Read More </a>
-<% }); %>
+<% posts.forEach((post) => { %>
+    <h1><%= post.title %></h1>
+    <% if (post.content.length > 100) { %>
+        <% post.content = post.content.substring(0, 100) + '...'; %>
+        <% } %>
+    <p>
+    <%= post.content %> 
+    <a href="/posts/{<%= post.title %>}">Read More</a>
+    </p>
+    <% }) %>
 
 <!-- layout -->
 <%- include('partials/footer'); %>
