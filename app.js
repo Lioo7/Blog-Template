@@ -2,67 +2,95 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const ejs = require('ejs');
 const _ = require('lodash');
+const mongoose = require('mongoose');
 
-const homeStartingContnet = "homeStartingContnet...";
-const aboutContent = "aboutContent...";
-const contactContenet = "contactContenet...";
+main().catch(err => console.log(err));
 
-const app = express();
+async function main() {
+    await mongoose.connect('mongodb://127.0.0.1:27017/blogDB');
 
-app.set('view engine', 'ejs');
-app.use(bodyParser.urlencoded({ extended: true }));
-app.use(express.static("public"));
-
-const posts = [];
-
-app.get('/', function(req, res) {
-    res.render('home', {
-        startingContnet: homeStartingContnet, 
-        posts: posts
+    const postSchema = new mongoose.Schema({
+        title: String,
+        content: String
     });
-});
 
-app.get('/about', function(req, res){
-    res.render('about', {aboutContent: aboutContent});
-});
+    const Post = mongoose.model('Post', postSchema);
 
-app.get('/contact', function(req, res){
-    res.render('contact', {contactContenet: contactContenet});
-});
+    const homeStartingContnet = "homeStartingContnet...";
+    const aboutContent = "aboutContent...";
+    const contactContenet = "contactContenet...";
 
-app.get('/compose', function(req, res){
-    res.render('compose');
-});
+    const app = express();
 
-app.post('/compose', function(req, res){
-    const post = {
-        title: req.body.composeInputTitle,
-        content: req.body.composeInputPostBody
-    };
-    posts.push(post);
-    res.redirect('/');
-});
+    app.set('view engine', 'ejs');
+    app.use(bodyParser.urlencoded({ extended: true }));
+    app.use(express.static("public"));
 
-app.get('/posts/:postTitle', function(req, res){
-    let match = false;
-    const givenPostTitle = req.params.postTitle;
-    for (let i = 0; i < posts.length; i++) {
-        const currentTitle = posts[i].title;
-        if (_.lowerCase(currentTitle) === _.lowerCase(givenPostTitle)) {
-            match = true;
-            res.render('post', {
-                postTitle: currentTitle, 
-                postContent: posts[i].content
+    app.get('/', function(req, res) {
+        Post.find({}).then(function(foundPosts) {
+            console.log("Posts were loaded Successfully");
+            console.log(foundPosts);
+            res.render('home', {
+                startingContnet: homeStartingContnet, 
+                posts: foundPosts
             });
-            break;
-        }    
-    };
-    if (!match) {
-        console.log('No Match Found!');
-    }
-});
+        }).catch(function(err) {
+            console.error(err);
+        });
+    });
 
+    app.get('/about', function(req, res){
+        res.render('about', {aboutContent: aboutContent});
+    });
 
-app.listen(3000, function() {
-    console.log("Server started on port 3000\nhttp://localhost:3000/");
-})
+    app.get('/contact', function(req, res){
+        res.render('contact', {contactContenet: contactContenet});
+    });
+
+    app.get('/compose', function(req, res){
+        res.render('compose');
+    });
+
+    app.post('/compose', function(req, res){
+        const post = new Post({
+            title: req.body.composeInputTitle,
+            content: req.body.composeInputPostBody
+        });
+        post.save().then(function () {
+            console.log('Post saved successfully');
+            res.redirect('/');
+        }).catch(function (err) {
+            console.error(err);
+        });
+    });
+
+    app.get('/posts/:postId', function(req, res) {
+        const postId = req.params.postId;
+        console.log('postId:', postId);
+        
+        Post.findOne({_id: postId})
+          .then(function(post) {
+            if (!post) {
+              console.log("Post not found");
+              res.status(404).send("Post not found");
+              return;
+            }
+            
+            console.log("Post found");
+            res.render('post', {
+              postTitle: post.title,
+              postContent: post.content
+            });
+          })
+          .catch(function(err) {
+            console.log("Error occurred while finding the post:\n" + err.message);
+            res.status(500).send("Error occurred while finding the post");
+          });
+      });
+      
+
+    app.listen(3000, function() {
+        console.log("Server started on port 3000\nhttp://localhost:3000/");
+    })
+
+}
